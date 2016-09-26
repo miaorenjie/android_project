@@ -9,7 +9,7 @@ import java.util.ArrayList;
  */
 public class Content {
 
-    public static MediaPlayer player;
+//    public static MediaPlayer player;
     public static ArrayList<music> mydata;
     public static int mode_flag=0;
 

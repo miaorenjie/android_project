@@ -2,9 +2,12 @@ package com.example.user.musicplayer;
 
 import android.Manifest;
 import android.annotation.TargetApi;
+import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.ContentUris;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -52,6 +55,8 @@ import java.util.Random;
 import android.os.Handler;
 
 import static com.example.user.musicplayer.Content.*;
+import static com.example.user.musicplayer.PlayingActivity.*;
+
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, AdapterView.OnItemClickListener {
 
     private TextView playname;
@@ -76,10 +81,53 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private boolean ischoose=false;
     private boolean mainpause=true;
 
+    private final int PLAYING = 1;
+    private final int PAUSE = 2;
+    private final int MODE = 3;
+    private final int PREV = 4;
+    private final int NEXT = 5;
+    private final int SKIP = 6;
+    private final int BACK = 7;
+    private final int CLICKITEM = 8;
+    private final int SETPLAY = 9;
+    private final int SETPAUSE = 10;
+    private final int UPDATE=11;
+    private final int PLAY=12;
+
+
+
+    private class MainReceiver extends BroadcastReceiver
+    {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            int control=intent.getIntExtra("control",0);
+
+            switch (control)
+            {
+                case UPDATE:
+                    Log.i("成功","MainReceiver");
+                    isplay = intent.getBooleanExtra("isplay", false);
+                    nowposition = intent.getIntExtra("position", 0);
+                    playposition = intent.getIntExtra("playposition", 0);
+                    ischoose=intent.getBooleanExtra("ischoose",false);
+                    break;
+            }
+            setinfo();
+
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         this.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        IntentFilter intentFilter=new IntentFilter();
+        intentFilter.addAction("UPDATE");
+        MainReceiver musicreceiver=new MainReceiver();
+        registerReceiver(musicreceiver, intentFilter);
+
+
         setContentView(R.layout.main);
         init();
 
@@ -98,7 +146,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //                }
 //            }
 //        };
-
+        Intent intent=new Intent(this,musicService.class);
+        startService(intent);
     }
 
     @Override
@@ -110,35 +159,35 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         else
             btplay.setImageResource(R.mipmap.play);
 
-        player.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-            @Override
-            public void onCompletion(MediaPlayer mp) {
-                Log.e(TAG, "start onCompletion~~~");
-                switch (mode_flag) {
-                    case 0:
-                    case 1:
-                    case 3:
-
-                        if (nowposition == mydata.size() - 1)
-                            nowposition = 0;
-                        else
-                            nowposition++;
-                        break;
-                    case 2:
-                        nowposition = r.nextInt(mydata.size());
-                        break;
-                }
-                mp.reset();
-                try {
-                    mp.setDataSource(mydata.get(nowposition).getUri());
-                    mp.prepare();
-                    mp.start();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                setinfo();
-            }
-        });
+//        player.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+//            @Override
+//            public void onCompletion(MediaPlayer mp) {
+//                Log.e(TAG, "start onCompletion~~~");
+//                switch (mode_flag) {
+//                    case 0:
+//                    case 1:
+//                    case 3:
+//
+//                        if (nowposition == mydata.size() - 1)
+//                            nowposition = 0;
+//                        else
+//                            nowposition++;
+//                        break;
+//                    case 2:
+//                        nowposition = r.nextInt(mydata.size());
+//                        break;
+//                }
+//                mp.reset();
+//                try {
+//                    mp.setDataSource(mydata.get(nowposition).getUri());
+//                    mp.prepare();
+//                    mp.start();
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
+//                setinfo();
+//            }
+//        });
 
 
 //
@@ -207,11 +256,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             if(isplay)
             {
                 btplay.setImageResource(R.mipmap.pause);
-                mainpause=false;
             }
             else {
                 btplay.setImageResource(R.mipmap.play);
-                mainpause=true;
             }setinfo();
         }
 
@@ -270,7 +317,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         //  adapter = new ArrayAdapter<String>(this, android.R.layout.simple_dropdown_item_1line);
         relativeLayout = (RelativeLayout) findViewById(R.id.playbar);
         relativeLayout.setOnClickListener(this);
-        player = new MediaPlayer();
+//        player = new MediaPlayer();
         btplay = (ImageView) findViewById(R.id.play);
         //    btplay.setImageBitmap(real1);
         btplay.setOnClickListener(this);
@@ -290,113 +337,121 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     public void onClick(View v) {
+        Intent intent=new Intent("GET");
         switch (v.getId()) {
             case R.id.playbar:
-                if(ischoose)
-                     playposition=player.getCurrentPosition();
+//                if(ischoose)
+//                     playposition=player.getCurrentPosition();
                 Log.e(TAG, "start playposition~~~"+playposition);
 //                Log.i("main", "" + playposition);
 //                player.stop();
             //    player.release();
-                Toast.makeText(MainActivity.this, "111", Toast.LENGTH_SHORT).show();
-//                Intent intent=new Intent(this, textActivity.class);
-                Intent intent = new Intent(this, PlayingActivity.class);
-                intent.putExtra("position",nowposition);
-                intent.putExtra("playposition", playposition);
-                intent.putExtra("isplay", isplay);
-                intent.putExtra("ischoose",ischoose);
-                intent.putExtra("mainpause",mainpause);
-                startActivityForResult(intent, 1);
-//                startActivity(intent);
+//                Toast.makeText(MainActivity.this, "111", Toast.LENGTH_SHORT).show();
+                Intent intent1=new Intent(this, PlayingActivity.class);
+//                Intent intent1 = new Intent(this, PlayingActivity.class);
+//                intent1.putExtra("position",nowposition);
+//                intent1.putExtra("playposition", playposition);
+//                intent1.putExtra("isplay", isplay);
+//                intent1.putExtra("ischoose",ischoose);
+//                startActivityForResult(intent1, 1);
+                startActivity(intent1);
 //                setContentView(R.layout.activity_playing);
+
+                intent.putExtra("control",SKIP);
+                sendBroadcast(intent);
                 break;
 
             case R.id.playingper:
-                switch (mode_flag) {
-                    case 0:
-                    case 1:
-                    case 3:
-                        if (nowposition == 0)
-                            nowposition = mydata.size() - 1;
-                        else
-                            nowposition--;
-                        break;
-                    case 2:
-                        nowposition = r.nextInt(mydata.size());
-                        break;
-                }
-
-                try {
-                    player.reset();
-                    player.setDataSource(mydata.get(nowposition).getUri());
-                    player.prepare();
-                    player.start();
-                    setinfo();
-                    isplay=true;
-                    btplay.setImageResource(R.mipmap.pause);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
+//                switch (mode_flag) {
+//                    case 0:
+//                    case 1:
+//                    case 3:
+//                        if (nowposition == 0)
+//                            nowposition = mydata.size() - 1;
+//                        else
+//                            nowposition--;
+//                        break;
+//                    case 2:
+//                        nowposition = r.nextInt(mydata.size());
+//                        break;
+//                }
+//
+//                try {
+//                    player.reset();
+//                    player.setDataSource(mydata.get(nowposition).getUri());
+//                    player.prepare();
+//                    player.start();
+//                    setinfo();
+//                    isplay=true;
+//                    btplay.setImageResource(R.mipmap.pause);
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
+                intent.putExtra("control",PREV);
+                sendBroadcast(intent);
                 break;
             case R.id.play:
-                if(isplay)
-                {
-                    isplay=false;
-                    mainpause=true;
-                    playposition=player.getCurrentPosition();
-                    player.pause();
-                    mainpause=true;
-                    btplay.setImageResource(R.mipmap.play);
-                }
-                else
-                {
-                    isplay=true;
-                    player.reset();
-
-                    try {
-                        player.setDataSource(mydata.get(nowposition).getUri());
-
-                        player.prepare();
-
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    player.start();
-                    player.seekTo(playposition);
-                    btplay.setImageResource(R.mipmap.pause);
-                    mainpause=false;
-                }
-                setinfo();
-
+//                if(isplay)
+//                {
+//                    isplay=false;
+//                    mainpause=true;
+//                    playposition=player.getCurrentPosition();
+//                    player.pause();
+//                    mainpause=true;
+//                    btplay.setImageResource(R.mipmap.play);
+//                }
+//                else
+//                {
+//                    isplay=true;
+//                    player.reset();
+//
+//                    try {
+//                        player.setDataSource(mydata.get(nowposition).getUri());
+//
+//                        player.prepare();
+//
+//                    } catch (IOException e) {
+//                        e.printStackTrace();
+//                    }
+//                    player.start();
+//                    player.seekTo(playposition);
+//                    btplay.setImageResource(R.mipmap.pause);
+//                    mainpause=false;
+//                }
+//                setinfo();
+                intent.putExtra("control",PLAY);
+                sendBroadcast(intent);
                 break;
             case R.id.next:
-                switch (mode_flag) {
-                    case 0:
-                    case 1:
-                    case 3:
-                        if (nowposition == mydata.size() - 1)
-                            nowposition = 0;
-                        else
-                            nowposition++;
-                        break;
-                    case 2:
-                        nowposition = r.nextInt(mydata.size());
-                        break;
-                }
-
-                try {
-                    player.reset();
-                    player.setDataSource(mydata.get(nowposition).getUri());
-                    player.prepare();
-                    player.start();
-                    setinfo();
-                    isplay=true;
-                    btplay.setImageResource(R.mipmap.pause);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                mainpause=false;
+//                switch (mode_flag) {
+//                    case 0:
+//                    case 1:
+//                    case 3:
+//                        if (nowposition == mydata.size() - 1)
+//                            nowposition = 0;
+//                        else
+//                            nowposition++;
+//                        break;
+//                    case 2:
+//                        nowposition = r.nextInt(mydata.size());
+//                        break;
+//                }
+//
+//                try {
+//                    player.reset();
+//                    player.setDataSource(mydata.get(nowposition).getUri());
+//                    player.prepare();
+//                    player.start();
+//                    setinfo();
+//                    isplay=true;
+//                    btplay.setImageResource(R.mipmap.pause);
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
+//                mainpause=false;
+//                break;
+                intent.putExtra("control",NEXT);
+                sendBroadcast(intent);
                 break;
         }
     }
@@ -405,40 +460,49 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         playname.setText(mydata.get(nowposition).getPlayName());
         artistname.setText(mydata.get(nowposition).getArtistName());
         tvtile.setImageBitmap(mydata.get(nowposition).getListcover());
+        Log.e("!!!!!",""+isplay);
+        if(isplay)
+            btplay.setImageResource(R.mipmap.pause);
+        else
+            btplay.setImageResource(R.mipmap.play);
         ischoose=true;
 //        progressBar.setMax(player.getDuration());
     }
 
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-        if (isplay && position == nowposition) {
-            player.pause();
-            isplay = false;
-            mainpause=true;
-            btplay.setImageResource(R.mipmap.play);
-            playposition = player.getCurrentPosition();
-            Log.i("info", "" + position);
-            setinfo();
-            nowposition = position;
-        } else {
-            try {
-
-                player.reset();
-                player.setDataSource(mydata.get(position).getUri());
-                player.prepare();
-                player.start();
-                if (nowposition == position)
-                    player.seekTo(playposition);
-                isplay = true;
-                mainpause=false;
-                nowposition = position;
-                Log.i("info", "" + position);
-                btplay.setImageResource(R.mipmap.pause);
-                setinfo();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        ischoose=true;
+//        if (isplay && position == nowposition) {
+//            player.pause();
+//            isplay = false;
+//            mainpause=true;
+//            btplay.setImageResource(R.mipmap.play);
+//            playposition = player.getCurrentPosition();
+//            Log.i("info", "" + position);
+//            setinfo();
+//            nowposition = position;
+//        } else {
+//            try {
+//
+//                player.reset();
+//                player.setDataSource(mydata.get(position).getUri());
+//                player.prepare();
+//                player.start();
+//                if (nowposition == position)
+//                    player.seekTo(playposition);
+//                isplay = true;
+//                mainpause=false;
+//                nowposition = position;
+//                Log.i("info", "" + position);
+//                btplay.setImageResource(R.mipmap.pause);
+//                setinfo();
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
+//        }
+//        ischoose=true;
+        Intent intent=new Intent("GET");
+        intent.putExtra("control",CLICKITEM);
+        intent.putExtra("clickposition",position);
+        sendBroadcast(intent);
     }
 }

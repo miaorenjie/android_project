@@ -66,6 +66,10 @@ public class musicUtil {
 
     public static ArrayList<music> read(Context context) {
         ArrayList<music> mydata = new ArrayList<music>();
+        long albumid;
+        int index;
+        long songid;
+        String name1;
         String[] projection = {
                 Media.DISPLAY_NAME,
                 Media._ID,
@@ -80,12 +84,11 @@ public class musicUtil {
         Cursor cursor = cr.query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, projection, null, null, null, null);
         while (cursor.moveToNext()) {
             music data = new music();
-            long albumid = cursor.getLong(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID));
-             String name1=cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.DISPLAY_NAME));
-            int index=name1.lastIndexOf(".");
+            name1=cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.DISPLAY_NAME));
+            index =name1.lastIndexOf(".");
             name1=name1.substring(0,index);
             data.setPlayName(name1);
-            long songid = cursor.getLong(cursor.getColumnIndex(MediaStore.Audio.Media._ID));
+             songid= cursor.getLong(cursor.getColumnIndex(MediaStore.Audio.Media._ID));
             data.setUri(cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.DATA)));
             data.setArtistName(cursor.getString(cursor.getColumnIndex(Media.ARTIST)));
             data.setDuration(cursor.getInt(cursor.getColumnIndex(Media.DURATION)));
@@ -95,7 +98,6 @@ public class musicUtil {
                         + songid + "/albumart");
                 Log.i("id:", "" + songid);
                 ParcelFileDescriptor pfd = null;
-                BitmapFactory.Options options = new BitmapFactory.Options();
 
                 try {
                     pfd = cr.openFileDescriptor(uri, "r");
@@ -115,7 +117,7 @@ public class musicUtil {
                     data.setListcover(real);
 
                     Matrix matrix1 = new Matrix();
-                    matrix1.postScale(((float) 750) / bitmap.getWidth(), ((float)750) / bitmap.getHeight());
+                    matrix1.postScale(((float) 750) / bitmap.getWidth(), ((float) 750) / bitmap.getHeight());
                     Bitmap real1 = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix1, true);
                     data.setListcover(real);
 
