@@ -301,10 +301,14 @@ public class PlayingActivity extends Activity implements View.OnClickListener, S
     }
 
     public void setmusicInfo() {
-        rbd = RoundedBitmapDrawableFactory.create(getResources(), mydata.get(position).getPlaycover());
-        rbd.setCornerRadius(360);
+
         playingname.setText(mydata.get(position).getPlayName());
+//        playingcover.setImageBitmap(musicUtil.changeToCircle(this,mydata.get(position).getPlaycover(),360));
+       rbd= RoundedBitmapDrawableFactory.create(getResources(),mydata.get(position).getPlaycover());
+        rbd.setCornerRadius(360);
         playingcover.setImageDrawable(rbd);
+
+
         if (isplay)
             play.setImageResource(R.mipmap.playingpause);
         else

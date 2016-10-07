@@ -10,6 +10,8 @@ import android.graphics.Matrix;
 import android.net.Uri;
 import android.os.ParcelFileDescriptor;
 import android.provider.MediaStore;
+import android.support.v4.graphics.drawable.RoundedBitmapDrawable;
+import android.support.v4.graphics.drawable.RoundedBitmapDrawableFactory;
 import android.util.Log;
 
 import java.io.FileDescriptor;
@@ -19,6 +21,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import android.provider.MediaStore.Audio.Media;
+
+import static com.example.user.musicplayer.Content.mydata;
 
 /**
  * Created by user on 2016/9/11.
@@ -78,7 +82,6 @@ public class musicUtil {
                 Media.ARTIST,
                 Media.DURATION,
         };
-
         ContentResolver cr = context.getContentResolver();
         Bitmap bmp = BitmapFactory.decodeResource(context.getResources(), R.mipmap.zerolog);
         Cursor cursor = cr.query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, projection, null, null, null, null);
@@ -110,6 +113,10 @@ public class musicUtil {
                     Log.i("加载成功", "11111");
 
 
+//                    Bitmap bitmap = BitmapFactory.decodeFileDescriptor(fd);
+//                    data.setListcover(changeSize(bitmap, 250, 250));
+//                    data.setPlaycover(changeSize(bitmap,750,750));
+
                     Bitmap bitmap = BitmapFactory.decodeFileDescriptor(fd);
                     Matrix matrix = new Matrix();
                     matrix.postScale(((float) 250.0) / bitmap.getWidth(), ((float) 250.0) / bitmap.getHeight());
@@ -122,10 +129,23 @@ public class musicUtil {
                     data.setListcover(real);
 
                     data.setPlaycover(real1);
+//                    data.setListcover(bitmap);
+//                    data.setPlaycover(bitmap);
                 } else {
 
-                    data.setListcover(bmp);
-                    data.setPlaycover(bmp);
+//                    data.setListcover(changeSize(bmp, 250, 250));
+//                    data.setPlaycover(changeSize(bmp,750,750));
+                    Matrix matrix = new Matrix();
+                    matrix.postScale(((float) 250.0) / bmp.getWidth(), ((float) 250.0) / bmp.getHeight());
+                    Bitmap real = Bitmap.createBitmap(bmp, 0, 0, bmp.getWidth(), bmp.getHeight(), matrix, true);
+                    data.setListcover(real);
+
+                    Matrix matrix1 = new Matrix();
+                    matrix1.postScale(((float) 750) / bmp.getWidth(), ((float) 750) / bmp.getHeight());
+                    Bitmap real1 = Bitmap.createBitmap(bmp, 0, 0, bmp.getWidth(), bmp.getHeight(), matrix1, true);
+                    data.setListcover(real);
+//                    data.setListcover(bmp);
+//                    data.setPlaycover(bmp);
                     Log.i("没有加载成功！", "2222");
                 }
 
@@ -170,4 +190,18 @@ public class musicUtil {
         return mydata;
     }
 
+    public static Bitmap changeSize(Bitmap bitmap,float width,float height)
+    {
+        Matrix matrix1 = new Matrix();
+        matrix1.postScale(width / bitmap.getWidth(), height / bitmap.getHeight());
+        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix1, true);
+    }
+
+    public static Bitmap changeToCircle(Context context,Bitmap bitmap,int radian)
+    {
+        RoundedBitmapDrawable rbd = RoundedBitmapDrawableFactory.create(context.getResources(),bitmap);
+        rbd.setCornerRadius(radian);
+        return rbd.getBitmap();
+
+    }
 }

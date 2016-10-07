@@ -1,22 +1,30 @@
 package com.example.user.musicplayer;
 
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Bitmap;
+import android.graphics.Matrix;
 import android.media.MediaPlayer;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.Message;
 import android.support.annotation.Nullable;
+import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 
 import java.io.IOException;
 import java.util.Random;
 
 import android.os.Handler;
+import android.view.View;
+import android.widget.RemoteViews;
 
 import static com.example.user.musicplayer.Content.*;
 import static com.example.user.musicplayer.Content.mode_flag;
@@ -53,9 +61,18 @@ public class musicService extends Service {
     private final int PLAY = 12;
     private final int PROGRESSCHANGED = 13;
     private final int UPDATEPROGRESS = 14;
-
+    private final int CREAT=555;
+    private NotificationManager manager;
 
     private musicReceiver rv = new musicReceiver();
+
+
+    @Override
+    public void onDestroy() {
+        player.release();
+        manager.cancel(0);
+        super.onDestroy();
+    }
 
     @Nullable
     @Override
@@ -79,43 +96,43 @@ public class musicService extends Service {
             @Override
             public void onCompletion(MediaPlayer mp) {
 
-                    switch (mode_flag) {
-                        case 0:
-                        case 1:
-                            if (nowposition == mydata.size() - 1)
-                                nowposition = 0;
-                            else
-                                nowposition++;
-                            break;
-                        case 2:
-                            nowposition = r.nextInt(mydata.size());
-                            break;
-                        case 3:
-                            break;
-                    }
+                switch (mode_flag) {
+                    case 0:
+                    case 1:
+                        if (nowposition == mydata.size() - 1)
+                            nowposition = 0;
+                        else
+                            nowposition++;
+                        break;
+                    case 2:
+                        nowposition = r.nextInt(mydata.size());
+                        break;
+                    case 3:
+                        break;
+                }
                 mp.reset();
-                    try {
-                        mp.setDataSource(mydata.get(nowposition).getUri());
-                        mp.prepare();
-                        mp.start();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+                try {
+                    mp.setDataSource(mydata.get(nowposition).getUri());
+                    mp.prepare();
+                    mp.start();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                update_Notification();
+                intent1.putExtra("control", UPDATE);
+                intent1.putExtra("position", nowposition);
+                intent1.putExtra("playposition", playposition);
+                intent1.putExtra("isplay", isplay);
+                intent1.putExtra("ischoose", ischoose);
+                sendBroadcast(intent1);
 
-                    intent1.putExtra("control", UPDATE);
-                    intent1.putExtra("position", nowposition);
-                    intent1.putExtra("playposition", playposition);
-                    intent1.putExtra("isplay", isplay);
-                    intent1.putExtra("ischoose", ischoose);
-                    sendBroadcast(intent1);
 
-
-                    intent2.putExtra("control", UPDATE);
-                    intent2.putExtra("position", nowposition);
-                    intent2.putExtra("playposition", playposition);
-                    intent2.putExtra("isplay", isplay);
-                    intent2.putExtra("ischoose", ischoose);
-                    sendBroadcast(intent2);
+                intent2.putExtra("control", UPDATE);
+                intent2.putExtra("position", nowposition);
+                intent2.putExtra("playposition", playposition);
+                intent2.putExtra("isplay", isplay);
+                intent2.putExtra("ischoose", ischoose);
+                sendBroadcast(intent2);
 //                }
 //                juge = false;
             }
@@ -123,6 +140,7 @@ public class musicService extends Service {
 
         new Thread() {
             Intent intent = new Intent("PLAYINGUPDATE");
+
             @Override
             public void run() {
                 while (true) {
@@ -134,7 +152,6 @@ public class musicService extends Service {
                     if (player.isPlaying() && ischoose)
                         intent.putExtra("nowDruation", player.getCurrentPosition());
                     intent.putExtra("control", UPDATEPROGRESS);
-
                     intent.putExtra("position", nowposition);
                     intent.putExtra("playposition", playposition);
                     intent.putExtra("isplay", player.isPlaying());
@@ -148,6 +165,58 @@ public class musicService extends Service {
         super.onCreate();
     }
 
+    private void update_Notification() {
+        manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        RemoteViews remoteViews = new RemoteViews(getPackageName(), R.layout.notification_layout);
+
+
+        Bitmap bmp=mydata.get(nowposition).getListcover();
+        Matrix matrix = new Matrix();
+        matrix.postScale(((float) 300.0) / bmp.getWidth(), ((float) 300.0) / bmp.getHeight());
+        Bitmap real = Bitmap.createBitmap(bmp, 0, 0, bmp.getWidth(), bmp.getHeight(), matrix, true);
+
+        remoteViews.setImageViewBitmap(R.id.notiImage, real);
+
+        remoteViews.setTextViewText(R.id.notiName, mydata.get(nowposition).getPlayName());
+        remoteViews.setTextViewText(R.id.notiartist, mydata.get(nowposition).getArtistName());
+
+        remoteViews.setImageViewResource(R.id.noti_bt_per, R.mipmap.noti_prev);
+        if(!player.isPlaying())
+             remoteViews.setImageViewResource(R.id.noti_bt_play,R.mipmap.noti_play);
+        else
+            remoteViews.setImageViewResource(R.id.noti_bt_play,R.mipmap.noti_pause);
+        remoteViews.setImageViewResource(R.id.noti_bt_next, R.mipmap.noti_next);
+
+        PendingIntent skipIntent=PendingIntent.getActivity(this,0,new Intent(this,MainActivity.class),0);
+
+        Intent prebuttonIntent=new Intent("GET");
+        prebuttonIntent.putExtra("control", PREV);
+        PendingIntent preintent=PendingIntent.getBroadcast(this,0,prebuttonIntent,PendingIntent.FLAG_UPDATE_CURRENT);
+        remoteViews.setOnClickPendingIntent(R.id.noti_bt_per, preintent);
+
+        Intent playbuttonIntent=new Intent("GET");
+        playbuttonIntent.putExtra("control", PLAY);
+        PendingIntent playintent=PendingIntent.getBroadcast(this,1,playbuttonIntent,PendingIntent.FLAG_UPDATE_CURRENT);
+        remoteViews.setOnClickPendingIntent(R.id.noti_bt_play, playintent);
+
+        Intent nextbuttonIntent=new Intent("GET");
+        nextbuttonIntent.putExtra("control", NEXT);
+        PendingIntent nextintent=PendingIntent.getBroadcast(this,2,nextbuttonIntent,PendingIntent.FLAG_UPDATE_CURRENT);
+        remoteViews.setOnClickPendingIntent(R.id.noti_bt_next, nextintent);
+
+        Notification notification=new NotificationCompat.Builder(this).
+                setContent(remoteViews).
+                setContentTitle("正在播放的音乐是:"+mydata.get(nowposition).
+                        getPlayName()).
+                setSmallIcon(R.mipmap.icon).
+                setContentText(mydata.get(nowposition).getPlayName()).
+                setOngoing(true).
+                setContentIntent(skipIntent)
+                .build();
+
+        manager.notify(0,notification);
+    }
+
     private class musicReceiver extends BroadcastReceiver {
         int control;
         int controlplaying;
@@ -156,7 +225,7 @@ public class musicService extends Service {
 
         @Override
         public void onReceive(Context context, Intent intent) {
-            control = intent.getIntExtra("control", 0);
+            control = intent.getIntExtra("control", -1);
             controlplaying = intent.getIntExtra("controlplaying", -1);
             switch (control) {
                 case PLAY:
@@ -181,6 +250,8 @@ public class musicService extends Service {
                     if (controlplaying != -1)
                         isfirstcome = false;
                     ischoose = true;
+                    Log.e("asd","PLAY");
+                    update_Notification();
                     break;
                 case PLAYING:
                     break;
@@ -196,10 +267,10 @@ public class musicService extends Service {
                     switch (mode_flag) {
                         case 0:
                         case 1:
-                            if (nowposition == mydata.size() - 1)
-                                nowposition = 0;
+                            if (nowposition == 0)
+                                nowposition = mydata.size() - 1;
                             else
-                                nowposition++;
+                                nowposition--;
                             break;
                         case 2:
                             nowposition = r.nextInt(mydata.size());
@@ -220,6 +291,8 @@ public class musicService extends Service {
                     if (controlplaying != -1)
                         isfirstcome = false;
                     juge = true;
+                    update_Notification();
+                    Log.e("asd", "PREV");
                     break;
                 case NEXT:
                     switch (mode_flag) {
@@ -251,6 +324,8 @@ public class musicService extends Service {
                     if (controlplaying != -1)
                         isfirstcome = false;
                     juge = true;
+                    update_Notification();
+                    Log.e("asd", "NEXT");
                     break;
                 case SKIP:
                     if (ischoose)
@@ -287,6 +362,7 @@ public class musicService extends Service {
                     }
                     ischoose = true;
                     juge = true;
+                    update_Notification();
                     break;
                 case PROGRESSCHANGED:
 
@@ -308,6 +384,8 @@ public class musicService extends Service {
                     } else
                         player.seekTo((int) ((float) intent.getIntExtra("progress", 0) / intent.getIntExtra("seekMax", 0) * player.getDuration()));
 
+                    break;
+                case CREAT:
                     break;
             }
 
